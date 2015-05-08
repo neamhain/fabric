@@ -718,6 +718,80 @@
                 enumerable: false,
                 configurable: true
             });
+        },
+        
+        /**
+         * Brainfuck(String code)
+         * internal interpreter of brainfuck code
+         **/
+        Brainfuck: function Brainfuck(code, input) {
+            code = code.replaceAll(/[^><+-.,\[\]]/, '').split('');
+            input = input ? input : '';
+            
+            let justInTime = '\'use strict\';function O(P){S+=String.fromCharCode(R[P])}function I(P,C){C=T.shift();R[P]=C?C.charCodeAt(0):0}',
+                register = {},
+                pointer = 0;
+            
+            for(let index = 0; index < code.length; index++) {
+                let instruction = code[index],
+                    difference = 1;
+                
+                while(code[index + difference] === instruction) {
+                    difference++;
+                }
+                
+                index += difference - 1;
+                
+                if(instruction === '>') {
+                    pointer += difference;
+                } else if(instruction === '<') {
+                    pointer -= difference;
+                } else if(instruction === '+') {
+                    if(!register[pointer]) {
+                        justInTime += 'R[' + pointer + ']=(R[' + pointer + ']?R[' + pointer + ']:0)+' + difference + ';';
+                    } else if(difference < 2) {
+                        justInTime += 'R[' + pointer + ']++;'
+                    } else {
+                        justInTime += 'R[' + pointer + ']+=' + difference + ';'
+                    }
+                    
+                    if(!register[pointer]) {
+                        register[pointer] = true;
+                    }
+                } else if(instruction === '-') {
+                    if(!register[pointer]) {
+                        justInTime += 'R[' + pointer + ']=(R[' + pointer + ']?R[' + pointer + ']:0)-' + difference + ';';
+                    } else if(difference < 2) {
+                        justInTime += 'R[' + pointer + ']--;'
+                    } else {
+                        justInTime += 'R[' + pointer + ']-=' + difference + ';'
+                    }
+                    
+                    if(!register[pointer]) {
+                        register[pointer] = true;
+                    }
+                } else if(instruction === '.') {
+                    while(difference-- > 0) {
+                        justInTime += 'O(' + pointer + ');';
+                    }
+                } else if(instruction === ',') {
+                    while(difference-- > 0) {
+                        justInTime += 'I(' + pointer + ');';
+                    }
+                } else if(instruction === '[') {
+                    while(difference-- > 0) {
+                        justInTime += 'while(R[' + pointer + ']){';
+                    }
+                } else if(instruction === ']') {
+                    while(difference-- > 0) {
+                        justInTime += '}';
+                    }
+                }
+            }
+            
+            justInTime = '(function(R,S,T){' + justInTime + 'return S})({},\'\',\'' + input + '\'.split(\'\'))';
+            
+            return eval(justInTime);
         }
     });
     
